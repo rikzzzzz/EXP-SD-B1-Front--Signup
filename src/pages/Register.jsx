@@ -1,8 +1,10 @@
+
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import AuthLayout from "../components/AuthLayout.jsx";
 import FormField from "../components/FormField.jsx";
+import { registerUser } from "../services/authService.js";
 
 const initialValues = {
   fullName: "",
@@ -83,48 +85,52 @@ export default function Register() {
     setSuccess(false);
   }
 
- function handleSubmit(event) {
-  event.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
 
-  const nextErrors = validate(values);
-  setErrors(nextErrors);
-  setSuccess(false);
+    const nextErrors = validate(values);
+    setErrors(nextErrors);
+    setSuccess(false);
 
-  if (Object.keys(nextErrors).length > 0) {
-    return;
-  }
-
-  try {
-    const user = {
-      fullName: values.fullName.trim(),
-      email: values.email.trim().toLowerCase(),
-      password: values.password,
-    };
-
-    // Save registration in browser localStorage
-    localStorage.setItem("demoUser", JSON.stringify(user));
-
-    // Confirm the save succeeded
-    const savedUser = localStorage.getItem("demoUser");
-
-    if (!savedUser) {
-      throw new Error("Registration was not saved.");
+    if (Object.keys(nextErrors).length > 0) {
+      return;
     }
 
-    setSuccess(true);
-  } catch (error) {
-    console.error("Registration save error:", error);
-    setErrors({
-      email: "Could not save registration. Please try again.",
-    });
+    try {
+      setSubmitting(true);
+
+      const result = await registerUser({
+        name: values.fullName.trim(),
+        email: values.email.trim().toLowerCase(),
+        password: values.password,
+        confirmPassword: values.confirmPassword,
+      });
+
+      console.log("Registration response:", result);
+
+      setSuccess(true);
+      setErrors({});
+      setValues(initialValues);
+
+    } catch (error) {
+      console.error("Registration API error:", error);
+
+      setErrors({
+        email:
+          error.message ||
+          "Registration failed. Please try again.",
+      });
+
+    } finally {
+      setSubmitting(false);
+    }
   }
-}
 
   return (
     <AuthLayout
       eyebrow="GET STARTED"
       title="Create your account"
-      subtitle="Enter your details to validate the registration form."
+      subtitle="Enter your details to create your account."
       footer={
         <span>
           Already have an account?{" "}
@@ -133,7 +139,6 @@ export default function Register() {
       }
     >
       <form onSubmit={handleSubmit} noValidate>
-
         <FormField
           id="fullName"
           label="Full name"
@@ -192,12 +197,11 @@ export default function Register() {
 
             <div>
               <strong>
-                Registration form validated!
+                Registration successful!
               </strong>
 
               <p>
-                Validation passed locally.
-                No account was created on a server.
+                Your account has been created successfully.
               </p>
 
               <Link
@@ -216,14 +220,13 @@ export default function Register() {
           disabled={submitting}
         >
           {submitting
-            ? "Validating..."
-            : "Validate registration"}
+            ? "Creating account..."
+            : "Create account"}
 
           {!submitting && (
             <span aria-hidden="true">→</span>
           )}
         </button>
-
       </form>
     </AuthLayout>
   );

@@ -1,8 +1,10 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import AuthLayout from "../components/AuthLayout.jsx";
 import FormField from "../components/FormField.jsx";
+import { loginUser } from "../services/authService.js";
 
 export default function SignIn() {
   const [values, setValues] = useState({
@@ -29,64 +31,53 @@ export default function SignIn() {
     }));
   }
 
- 
-function handleSubmit(event) {
-  event.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
 
-  const nextErrors = {};
+    const nextErrors = {};
 
-  if (!values.email.trim()) {
-    nextErrors.email = "Please enter your email address.";
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) {
-    nextErrors.email = "Enter a valid email address.";
+    if (!values.email.trim()) {
+      nextErrors.email = "Please enter your email address.";
+    } else if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())
+    ) {
+      nextErrors.email = "Enter a valid email address.";
+    }
+
+    if (!values.password) {
+      nextErrors.password = "Please enter your password.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    setSubmitting(true);
+    setErrors({});
+
+    try {
+      await loginUser(
+        values.email.trim().toLowerCase(),
+        values.password
+      );
+
+navigate("/profile", { replace: true });
+    } catch (error) {
+      setErrors({
+        email: error.message || "Login failed. Please try again.",
+        password: "",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   }
-
-  if (!values.password) {
-    nextErrors.password = "Please enter your password.";
-  }
-
-  if (Object.keys(nextErrors).length > 0) {
-    setErrors(nextErrors);
-    return;
-  }
-
-  const savedUser = localStorage.getItem("demoUser");
-
-  if (!savedUser) {
-    setErrors({
-      email: "Please register first.",
-      password: "",
-    });
-    return;
-  }
-
-  const registeredUser = JSON.parse(savedUser);
-
-  if (
-    values.email.trim().toLowerCase() !== registeredUser.email ||
-    values.password !== registeredUser.password
-  ) {
-    setErrors({
-      email: "Incorrect email or password.",
-      password: "Incorrect email or password.",
-    });
-    return;
-  }
-
-  setErrors({});
-  setSubmitting(true);
-
-  window.setTimeout(() => {
-    navigate("/success", { replace: true });
-  }, 300);
-}
-
 
   return (
     <AuthLayout
       eyebrow="WELCOME BACK"
       title="Sign in to AuthFlow"
-      subtitle="Enter your details to try the mock sign-in flow."
+      subtitle="Enter your details to sign in to your account."
       footer={
         <span>
           New here?{" "}
@@ -97,7 +88,6 @@ function handleSubmit(event) {
       }
     >
       <form onSubmit={handleSubmit} noValidate>
-
         <FormField
           id="email"
           label="Email address"
@@ -127,9 +117,9 @@ function handleSubmit(event) {
           />
 
           <p>
-            <strong>Demo mode</strong> — any email
-            in a valid format and any non-empty password
-            will continue. This is not real authentication.
+            <strong>Secure sign in</strong> — your
+            credentials will be verified using the
+            authentication API.
           </p>
         </div>
 
@@ -144,7 +134,6 @@ function handleSubmit(event) {
             <span aria-hidden="true">→</span>
           )}
         </button>
-
       </form>
     </AuthLayout>
   );
